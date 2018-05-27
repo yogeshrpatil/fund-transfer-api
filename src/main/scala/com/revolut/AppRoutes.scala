@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
-import com.revolut.actors.AccountManager.{ Accounts, AddAccount, DeleteAccount, GetAccount }
+import com.revolut.actors.AccountManager.{ Accounts, OpenAccount, CloseAccount, GetAccountDetails }
 import com.revolut.models.Models.Account
 
 import scala.concurrent.duration._
@@ -15,7 +15,7 @@ trait AppRoutes extends JsonSupport {
   implicit def system: ActorSystem
   lazy val log = Logging(system, classOf[AppRoutes])
   def accountManagerActor: ActorRef
-  implicit lazy val timeout = Timeout(5.seconds) // usually we'd obtain the timeout from the system's configuration
+  implicit lazy val timeout = Timeout(5.seconds)
 
   lazy val appRoutes: Route =
     path("healthcheck") {
@@ -24,27 +24,29 @@ trait AppRoutes extends JsonSupport {
       }
     } ~
       path("accounts") {
-        put {
-          entity(as[Account]) { account =>
-            onSuccess((accountManagerActor ? AddAccount(account)).mapTo[Account]) { response => complete(response) }
+        concat({
+          put {
+            entity(as[Account]) { account =>
+              onSuccess((accountManagerActor ? OpenAccount(account)).mapTo[Account]) { response => complete(response) }
+            }
           }
-        }
-      } ~ {
-        path("accounts") {
-          get {
-            onSuccess((accountManagerActor ? GetAccount).mapTo[Accounts]) { response => complete(response) }
+        }, {
+          path("accounts") {
+            get {
+              onSuccess((accountManagerActor ? GetAccountDetails).mapTo[Accounts]) { response => complete(response) }
+            }
           }
-        }
+        })
       } ~ {
         path("accounts" / Segment) { id =>
           concat(
             {
               get {
-                onSuccess((accountManagerActor ? GetAccount(id)).mapTo[Account]) { response => complete(response) }
+                onSuccess((accountManagerActor ? GetAccountDetails(id)).mapTo[Account]) { response => complete(response) }
               }
             },
             delete {
-              onSuccess((accountManagerActor ? DeleteAccount(id)).mapTo[Account]) { response => complete(response) }
+              onSuccess((accountManagerActor ? CloseAccount(id)).mapTo[Account]) { response => complete(response) }
             }
           )
         }

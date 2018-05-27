@@ -4,7 +4,7 @@ lazy val akkaVersion    = "2.5.11"
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
-      organization    := "revolut",
+      organization    := "com/revolut",
       scalaVersion    := "2.11.8"
     )),
     name := "fund-transfer-api",
